@@ -1,5 +1,3 @@
-
-
 #include <algorithm>
 #include <iostream>
 #include <set>
@@ -43,7 +41,6 @@ vector<string> SplitIntoWords(const string& text) {
 	if (!word.empty()) {
 		words.push_back(word);
 	}
-
 	return words;
 }
 
@@ -52,8 +49,6 @@ struct Document {
 	double relevance;
 };
 
-
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class SearchServer {
 public:
 
@@ -70,14 +65,11 @@ public:
 		for (const string& word : words) {
 			word_to_document_freqs_[word][document_id] += koef;
 		}
-
-
 	}
 
 	vector<Document> FindTopDocuments(const string& raw_query) const {
 		const Query request = ParseQuery(raw_query);
 		auto matched_documents = FindAllDocuments(request);
-
 		sort(matched_documents.begin(), matched_documents.end(),
 			[](const Document& lhs, const Document& rhs) {
 				return lhs.relevance > rhs.relevance;
@@ -110,7 +102,6 @@ private:
 			if (!IsStopWord(word)) {
 				words.push_back(word);
 			}
-
 		}
 		return words;
 	}
@@ -118,71 +109,55 @@ private:
 	Query ParseQuery(const string& text) const {
 		Query request;
 		for (const string& word : SplitIntoWordsNoStop(text)) {
-			if (word[0] == '-')
+			if (word[0] == '-') {
 				request.minusWords.insert(word.substr(1));
-			else
+			}
+			else {
 				request.plusWords.insert(word);
+			}
 		}
 		return request;
 	}
 
-	/// / ЗДЕСЬ ИЩЕМ СЛОВАЗДЕСЬ ИЩЕМ СЛОВАЗДЕСЬ ИЩЕМ СЛОВАЗДЕСЬ ИЩЕМ СЛОВА!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+	double invWordFreqCalc(const string& plusWord)const {
+		return log(document_count_ * 1.0 / word_to_document_freqs_.at(plusWord).size());
+	};
 
 	vector<Document> FindAllDocuments(const Query& query_words) const {
 		vector<Document> matched_documents;
 		map<int, double> document_to_relevance;
-
-
-		//double invWordFreq = 0.0;
-		for (const string& plusWord : query_words.plusWords)
-		{
+		for (const string& plusWord : query_words.plusWords) {
 			if (word_to_document_freqs_.count(plusWord) == 0) {
 				continue;
 			}
 
-
-		
-		const double invWordFreq=log(document_count_ * 1.0 / word_to_document_freqs_.at(plusWord).size());
-		if (word_to_document_freqs_.find(plusWord) != word_to_document_freqs_.end())
-
+			double invWordFreq = invWordFreqCalc(plusWord);
 
 			for (const auto& [id, wordFr] : word_to_document_freqs_.at(plusWord))
 			{
 				document_to_relevance[id] += wordFr * invWordFreq;
-
 			}
-
-	}
-
-	vector<int> delNum;
-	for (const auto& minWord : query_words.minusWords)
-	{
-		if (word_to_document_freqs_.count(minWord) == 0) {
-			continue;
 		}
-		for (const auto& [id, wordFr] : word_to_document_freqs_.at(minWord))
+
+			for (const auto& minWord : query_words.minusWords)
 		{
-			delNum.push_back(id);
+			if (word_to_document_freqs_.count(minWord) == 0) {
+				continue;
+			}
+				
+			for (const auto& [id, wordFr] : word_to_document_freqs_.at(minWord))
+			{
+			  document_to_relevance.erase(id);	
+			}
 		}
-	}
 
-	for (const auto& num : delNum) {
-		document_to_relevance.erase(num);
-	}
+			for (const auto& document : document_to_relevance) {
+			matched_documents.push_back({ document.first, document.second });
+		}
 
-	for (const auto& document : document_to_relevance) {
-
-		matched_documents.push_back({ document.first, document.second });
+		return matched_documents;
 	}
-	return matched_documents;
-}
 };
-
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
 
 SearchServer CreateSearchServer() {
 	SearchServer search_server;
@@ -198,8 +173,6 @@ SearchServer CreateSearchServer() {
 
 int main() {
 	const SearchServer search_server = CreateSearchServer();
-
-
 	const string query = ReadLine();
 	for (const auto& s : search_server.FindTopDocuments(query)) {
 		cout << "{ document_id = "s << s.id << ", "
